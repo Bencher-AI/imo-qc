@@ -1,0 +1,15 @@
+imo-qc
+Copyright 2026 UniPat-AI
+
+This product includes software developed at UniPat-AI.
+
+--------------------------------------------------------------------------------
+
+The AI-resistance solver and grader prompts
+
+    src/imo_qc/prompts/solver.txt
+    src/imo_qc/prompts/grader.txt
+
+are adapted from IMO-ProofBench (https://github.com/google-deepmind/imo-proofbench).
+The scoring protocol they implement -- an independent solver attempt graded against
+a reference solution and a 10-point rubric -- follows that work.

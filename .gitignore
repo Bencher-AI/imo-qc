@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# local config with real keys, and run outputs
+imo-qc.yaml
+*.local.yaml
+.env
+results*.jsonl
+out*.jsonl

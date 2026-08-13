@@ -1,0 +1,65 @@
+# imo-qc configuration.
+#
+# Any OpenAI-compatible endpoint works: a hosted API, a local vLLM server, or a
+# gateway in front of several providers. `model` has no default -- name it
+# explicitly so a run is never billed to a model you did not choose.
+#
+# ${VAR} is read from the environment; keys never belong in this file.
+
+resistance:
+  attempts: 3
+  # Stop the remaining attempts once one scores at least this much. Off by
+  # default so the report stays purely diagnostic. It only saves work on
+  # problems the solver actually solves.
+  early_stop_at: null
+
+  solver:
+    base_url: https://api.openai.com/v1
+    api_key: ${OPENAI_API_KEY}
+    model: <your-solver-model>
+    max_completion_tokens: 131072
+    timeout_sec: 3000
+    # Streaming serves two purposes: a long reasoning call is less likely to be
+    # dropped by an intermediate proxy, and the final frame carries token usage,
+    # whose absence is how a truncated response is detected.
+    stream: true
+    # Passed through to the endpoint untouched. Drop it if yours rejects unknown
+    # fields.
+    extra_body:
+      reasoning_effort: xhigh
+      enable_thinking: true
+
+  grader:
+    # Fields omitted here are inherited from `solver`, including the token limit
+    # and timeout: a grader that gets truncated mid-verification scores low,
+    # which is indistinguishable from a problem that resisted the solver.
+    base_url: https://api.deepseek.com/v1
+    api_key: ${GRADER_API_KEY}
+    model: <your-grader-model>
+
+quality_checks:
+  model:
+    base_url: https://api.openai.com/v1
+    api_key: ${OPENAI_API_KEY}
+    model: <your-reviewer-model>
+    max_tokens: 8192
+    timeout_sec: 120
+
+# Transport ceiling. Must be larger than every timeout_sec above, otherwise a
+# call can be cut off before its own deadline.
+http_timeout_sec: 3600
+
+# Problems in flight (CLI).
+concurrency: 8
+# Hard ceiling on concurrent LLM calls. One problem issues many calls at once,
+# so without this a modest problem-level concurrency still floods the endpoint.
+max_inflight_calls: 10
+
+retry:
+  # 429, 5xx, connection errors, truncated streams. max_attempts counts the
+  # first call.
+  transport: { max_attempts: 3, base_backoff_ms: 200 }
+  # Answers that arrived but are unusable: empty content, no JSON object, no
+  # <points> block. Empty completions returned with finish_reason=stop are
+  # common enough that this layer matters more than the transport one.
+  semantic: { max_attempts: 6, base_backoff_ms: 2000 }

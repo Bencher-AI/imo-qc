@@ -1,0 +1,3 @@
+【输出】只输出一个 JSON 对象，不要任何额外文字或代码围栏：
+{"verdict":"pass"|"fail","reason":"中文，≤200字，说明判定依据"}
+存在任一条 fail 标准成立即 verdict=fail；均不成立则 pass。

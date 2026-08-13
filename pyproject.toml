@@ -1,0 +1,41 @@
+[project]
+name = "imo-qc"
+version = "0.1.0"
+description = "AI-resistance and quality checks for olympiad math problems"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "UniPat-AI" }]
+keywords = ["olympiad", "mathematics", "evaluation", "llm", "imo"]
+classifiers = [
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering :: Mathematics",
+]
+dependencies = [
+  "openai>=1.40",
+  "httpx>=0.27",
+  "pydantic>=2.7",
+  "pyyaml>=6.0",
+  "click>=8.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.23"]
+
+[project.scripts]
+imo-qc = "imo_qc.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/UniPat-AI/imo-qc"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/imo_qc"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

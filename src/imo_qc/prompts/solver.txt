@@ -1,0 +1,9 @@
+{nonce_guard}
+
+Solve the following proof-based mathematical olympiad problem.
+
+Write a rigorous solution in English. Provide the full argument, not just a
+short answer. If you are unsure, still give your best mathematical attempt.
+
+**PROBLEM STATEMENT**
+{statement}
