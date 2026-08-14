@@ -99,6 +99,28 @@ def test_nonces_differ_between_evaluations():
     assert prompts.make_nonce() != prompts.make_nonce()
 
 
+def test_prompts_dir_overrides_bundled_files(tmp_path):
+    """Replacing a prompt must not require editing the installed package."""
+    (tmp_path / "novelty.txt").write_text(
+        "MY OWN NOVELTY PROMPT\n\n{nonce_guard}\n【判 fail 标准】...\n{data}\n\n{json_out}",
+        encoding="utf-8",
+    )
+    rendered = prompts.render_check(
+        CHECKS["novelty"], make_problem(), None, "main", "abcd1234", tmp_path
+    )
+    assert rendered.startswith("MY OWN NOVELTY PROMPT")
+    # Files not present in the override directory still come from the package.
+    assert "【数据边界与安全】" in rendered
+    assert "均不成立则 pass。" in rendered
+
+
+def test_prompts_dir_falls_back_when_name_absent(tmp_path):
+    rendered = prompts.render_check(
+        CHECKS["expression"], make_problem(), None, "main", "abcd1234", tmp_path
+    )
+    assert rendered.startswith("你是 IMO 竞赛题审核专家")
+
+
 def test_every_dimension_has_a_prompt_file():
     for name in CHECKS:
         text = prompts.load(name)

@@ -234,6 +234,16 @@ async def test_request_kwargs_use_max_completion_tokens_and_stream_options():
     assert kwargs["extra_body"] == {"reasoning_effort": "xhigh"}
 
 
+def test_sampling_fields_reach_the_request_body():
+    kwargs = make_client(temperature=0.7, top_p=0.9, seed=42)._request_kwargs("p")
+    assert (kwargs["temperature"], kwargs["top_p"], kwargs["seed"]) == (0.7, 0.9, 42)
+
+
+def test_unset_sampling_fields_are_omitted_so_endpoint_defaults_apply():
+    kwargs = make_client()._request_kwargs("p")
+    assert not {"temperature", "top_p", "seed"} & set(kwargs)
+
+
 def test_sdk_retries_are_disabled():
     # The SDK retries twice by default, which would silently multiply the
     # transport budget configured here.

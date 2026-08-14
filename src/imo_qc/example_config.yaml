@@ -1,4 +1,4 @@
-# imo-qc configuration.
+# imo-qc configuration. Get a copy with:  imo-qc init > imo-qc.yaml
 #
 # Any OpenAI-compatible endpoint works: a hosted API, a local vLLM server, or a
 # gateway in front of several providers. `model` has no default -- name it
@@ -18,16 +18,22 @@ resistance:
     api_key: ${OPENAI_API_KEY}
     model: <your-solver-model>
     max_completion_tokens: 131072
+    # With greedy decoding every attempt returns nearly the same answer, so
+    # attempts > 1 would cost N times as much for a single sample. Set a
+    # temperature (and a seed, where the endpoint honours one) to make the
+    # attempts independent and the run reproducible.
+    temperature: 1.0
+    # seed: 12345
+    # A single reasoning call can run for a long time; keep this generous.
     timeout_sec: 3000
-    # Streaming serves two purposes: a long reasoning call is less likely to be
-    # dropped by an intermediate proxy, and the final frame carries token usage,
-    # whose absence is how a truncated response is detected.
+    # Streaming serves two purposes: a long call is less likely to be dropped by
+    # an intermediate proxy, and the final frame carries token usage, whose
+    # absence is how a truncated response is detected.
     stream: true
-    # Passed through to the endpoint untouched. Drop it if yours rejects unknown
-    # fields.
+    # Passed through to the endpoint untouched. `reasoning_effort` is
+    # provider-specific -- drop it if yours rejects unknown fields.
     extra_body:
       reasoning_effort: xhigh
-      enable_thinking: true
 
   grader:
     # Fields omitted here are inherited from `solver`, including the token limit
@@ -36,28 +42,38 @@ resistance:
     base_url: https://api.deepseek.com/v1
     api_key: ${GRADER_API_KEY}
     model: <your-grader-model>
+    # Grading should not be creative.
+    temperature: 0.0
 
 quality_checks:
   model:
     base_url: https://api.openai.com/v1
     api_key: ${OPENAI_API_KEY}
     model: <your-reviewer-model>
+    # Note: chat-completions endpoints take `max_tokens`; the o-series style
+    # ones take `max_completion_tokens` as above. Set exactly one.
     max_tokens: 8192
+    temperature: 0.0
     timeout_sec: 120
+
+# Directory holding replacement prompt files (e.g. translations). Any name found
+# there wins over the bundled one; the rest fall back. Keep your versions here
+# rather than editing the installed package, which an upgrade would revert.
+# prompts_dir: ./my-prompts
 
 # Transport ceiling. Must be larger than every timeout_sec above, otherwise a
 # call can be cut off before its own deadline.
 http_timeout_sec: 3600
 
-# Problems in flight (CLI).
+# Problems in flight. The CLI's --concurrency overrides this.
 concurrency: 8
-# Hard ceiling on concurrent LLM calls. One problem issues many calls at once,
-# so without this a modest problem-level concurrency still floods the endpoint.
+# Hard ceiling on concurrent LLM calls. You want both: one problem issues many
+# calls at once, so a modest problem-level concurrency still floods an endpoint.
 max_inflight_calls: 10
 
 retry:
   # 429, 5xx, connection errors, truncated streams. max_attempts counts the
-  # first call.
+  # first call, so 3 means at most 2 retries.
   transport: { max_attempts: 3, base_backoff_ms: 200 }
   # Answers that arrived but are unusable: empty content, no JSON object, no
   # <points> block. Empty completions returned with finish_reason=stop are

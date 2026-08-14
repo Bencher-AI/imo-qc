@@ -1,6 +1,9 @@
+from pathlib import Path
+
 import pytest
 from pydantic import ValidationError
 
+import imo_qc
 from imo_qc.config import ModelConfig, config_from_dict, load_config
 
 BASE = {
@@ -81,9 +84,17 @@ def test_attempts_must_be_positive(monkeypatch):
         config_from_dict(raw)
 
 
-def test_example_config_is_valid(monkeypatch):
+def test_shipped_example_config_is_valid(monkeypatch):
+    """The config printed by `imo-qc init` must actually load."""
     monkeypatch.setenv("OPENAI_API_KEY", "x")
     monkeypatch.setenv("GRADER_API_KEY", "y")
-    config = load_config("imo-qc.example.yaml")
+    config = load_config(Path(imo_qc.__file__).parent / "example_config.yaml")
     assert config.resistance is not None
     assert config.quality_checks is not None
+    # Sampling is set explicitly, otherwise repeated attempts are near-identical.
+    assert config.resistance.solver.temperature is not None
+
+
+def test_sampling_fields_are_only_sent_when_set():
+    endpoint = ModelConfig(base_url="u", model="m")
+    assert endpoint.temperature is None and endpoint.seed is None

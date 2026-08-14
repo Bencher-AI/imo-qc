@@ -61,6 +61,14 @@ def main() -> None:
 
 
 @main.command()
+def init() -> None:
+    """Print a starter configuration to stdout: imo-qc init > imo-qc.yaml"""
+    click.echo(
+        (Path(__file__).parent / "example_config.yaml").read_text(encoding="utf-8"), nl=False
+    )
+
+
+@main.command()
 @click.argument("problems", type=click.Path(exists=True, dir_okay=False, path_type=Path))
 @click.option("-o", "--output", type=click.Path(dir_okay=False, path_type=Path), required=True)
 @click.option(
@@ -77,17 +85,46 @@ def main() -> None:
     default=None,
     help=f"Comma-separated subset of: {', '.join(ALL_CHECKS)}",
 )
+@click.option(
+    "--limit",
+    type=int,
+    default=None,
+    help="Only evaluate the first N problems. Use this to price a run before committing to it.",
+)
+@click.option(
+    "--only",
+    type=click.Choice(["resistance", "quality"]),
+    default=None,
+    help="Run one capability only. Resistance is the expensive half.",
+)
+@click.option("--force", is_flag=True, help="Overwrite an existing output file.")
 def run(
     problems: Path,
     output: Path,
     config_path: Path,
     concurrency: Optional[int],
     checks: Optional[str],
+    limit: Optional[int],
+    only: Optional[str],
+    force: bool,
 ) -> None:
     """Evaluate every problem in a JSONL file."""
+    if output.exists() and not force:
+        # There is no resume, so silently truncating would destroy results that
+        # already cost real money.
+        raise click.ClickException(
+            f"{output} already exists. Move it aside or choose another path; "
+            f"pass --force to overwrite."
+        )
     config = load_config(config_path)
+    if only == "resistance":
+        config = config.model_copy(update={"quality_checks": None})
+    elif only == "quality":
+        config = config.model_copy(update={"resistance": None})
     selected = [c.strip() for c in checks.split(",")] if checks else None
     problem_list = _read_problems(problems)
+    if limit is not None:
+        problem_list = problem_list[:limit]
     qc = QC(config)
 
     async def go() -> int:

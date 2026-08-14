@@ -9,6 +9,7 @@ carries.
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 from typing import Optional
 
 from . import prompts
@@ -54,12 +55,15 @@ async def _one_attempt(
     nonce: str,
     solver_usage: TokenUsage,
     grader_usage: TokenUsage,
+    prompts_dir: Optional[Path],
 ) -> Attempt:
     try:
-        solution, su = await solver.complete_text(prompts.render_solver(problem, nonce))
+        solution, su = await solver.complete_text(
+            prompts.render_solver(problem, nonce, prompts_dir)
+        )
         solver_usage.add(su)
         points, raw, gu = await grader.complete_points(
-            prompts.render_grader(problem, main, solution, nonce)
+            prompts.render_grader(problem, main, solution, nonce, prompts_dir)
         )
         grader_usage.add(gu)
         return Attempt(
@@ -77,6 +81,7 @@ async def run_resistance(
     *,
     solver_usage: TokenUsage,
     grader_usage: TokenUsage,
+    prompts_dir: Optional[Path] = None,
 ) -> ResistanceResult:
     skipped = precheck(problem)
     if skipped is not None:
@@ -90,7 +95,7 @@ async def run_resistance(
     for i in range(1, cfg.attempts + 1):
         task = asyncio.create_task(
             _one_attempt(
-                i, problem, main, solver, grader, nonce, solver_usage, grader_usage
+                i, problem, main, solver, grader, nonce, solver_usage, grader_usage, prompts_dir
             )
         )
         tasks[task] = i

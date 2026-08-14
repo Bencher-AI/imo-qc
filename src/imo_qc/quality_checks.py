@@ -10,6 +10,7 @@ to know which is which.
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 from typing import Optional
 
 from . import prompts
@@ -48,8 +49,9 @@ async def _judge(
     nonce: str,
     client: LLMClient,
     usage: TokenUsage,
+    prompts_dir: Optional[Path],
 ) -> GroupResult:
-    prompt = prompts.render_check(decl, problem, group, uid, nonce)
+    prompt = prompts.render_check(decl, problem, group, uid, nonce, prompts_dir)
     try:
         (verdict, reason), _, u = await client.complete_verdict(prompt)
         usage.add(u)
@@ -65,6 +67,7 @@ async def run_quality_checks(
     *,
     usage: dict[str, TokenUsage],
     nonce: Optional[str] = None,
+    prompts_dir: Optional[Path] = None,
 ) -> dict[str, CheckResult]:
     nonce = nonce or prompts.make_nonce()
     results: dict[str, CheckResult] = {}
@@ -84,7 +87,7 @@ async def run_quality_checks(
                 (
                     name,
                     asyncio.create_task(
-                        _judge(decl, problem, group, uid, nonce, client, bucket)
+                        _judge(decl, problem, group, uid, nonce, client, bucket, prompts_dir)
                     ),
                 )
             )

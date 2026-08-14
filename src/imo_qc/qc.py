@@ -106,6 +106,7 @@ class QC:
             grader,
             solver_usage=usage.solver,
             grader_usage=usage.grader,
+            prompts_dir=self.config.prompts_dir,
         )
 
     async def aquality_checks(
@@ -118,7 +119,11 @@ class QC:
         client = self._reviewer_client()
         usage = usage if usage is not None else Usage()
         return await run_quality_checks(
-            problem, resolve_checks(checks), client, usage=usage.checks
+            problem,
+            resolve_checks(checks),
+            client,
+            usage=usage.checks,
+            prompts_dir=self.config.prompts_dir,
         )
 
     async def aevaluate(

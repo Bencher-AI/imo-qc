@@ -159,6 +159,10 @@ class LLMClient:
             kwargs["max_completion_tokens"] = self.cfg.max_completion_tokens
         elif self.cfg.max_tokens is not None:
             kwargs["max_tokens"] = self.cfg.max_tokens
+        for field in ("temperature", "top_p", "seed"):
+            value = getattr(self.cfg, field)
+            if value is not None:
+                kwargs[field] = value
         if self.cfg.extra_body:
             kwargs["extra_body"] = dict(self.cfg.extra_body)
         if self.cfg.stream:

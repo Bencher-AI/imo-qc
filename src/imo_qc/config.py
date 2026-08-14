@@ -29,6 +29,13 @@ class ModelConfig(BaseModel):
     # o-series style endpoints reject max_tokens and want this instead; the two
     # are mutually exclusive.
     max_completion_tokens: Optional[int] = None
+    #: Sent only when set, so an endpoint's own default applies otherwise. Worth
+    #: setting for the solver: with greedy decoding, repeated attempts return
+    #: near-identical answers and cost N times as much for one sample.
+    temperature: Optional[float] = None
+    top_p: Optional[float] = None
+    #: Where supported, fixes sampling for reproducible runs.
+    seed: Optional[int] = None
     timeout_sec: float = 120.0
     stream: bool = False
     extra_body: dict[str, Any] = Field(default_factory=dict)
@@ -85,6 +92,10 @@ class QualityChecksConfig(BaseModel):
 class Config(BaseModel):
     resistance: Optional[ResistanceConfig] = None
     quality_checks: Optional[QualityChecksConfig] = None
+    #: Directory of replacement prompt files. Any name found here wins over the
+    #: bundled one, so a translated set can live with your experiment instead of
+    #: inside site-packages.
+    prompts_dir: Optional[Path] = None
     #: HTTP-level ceiling. Must exceed every per-call timeout, otherwise a call
     #: can be cut off by the transport before its own deadline is reached.
     http_timeout_sec: float = 3600.0

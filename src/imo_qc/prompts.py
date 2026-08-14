@@ -11,6 +11,7 @@ from __future__ import annotations
 import secrets
 from functools import lru_cache
 from pathlib import Path
+from typing import Optional
 
 from .models import Problem, Solution, serialize_rubric
 from .registry import CheckDecl
@@ -31,9 +32,22 @@ H_RUBRICS_AGG = "【各组 rubric（聚合）】"
 
 
 @lru_cache(maxsize=None)
-def load(name: str) -> str:
-    """Read a prompt file, dropping only the trailing newline."""
-    return (_DIR / f"{name}.txt").read_text(encoding="utf-8").rstrip("\n")
+def _read(path: Path) -> str:
+    return path.read_text(encoding="utf-8").rstrip("\n")
+
+
+def load(name: str, prompts_dir: Optional[Path] = None) -> str:
+    """Read a prompt, preferring ``prompts_dir`` when it holds a file of that name.
+
+    Overriding by directory rather than by editing the installed package keeps a
+    translated or reworded prompt set outside site-packages, where an upgrade
+    cannot silently revert it.
+    """
+    if prompts_dir is not None:
+        override = Path(prompts_dir) / f"{name}.txt"
+        if override.exists():
+            return _read(override)
+    return _read(_DIR / f"{name}.txt")
 
 
 def make_nonce() -> str:
@@ -104,17 +118,24 @@ def build_data_block(decl: CheckDecl, problem: Problem, group: Solution | None, 
     return "\n\n".join(s for s in sections if s)
 
 
-def render_check(decl: CheckDecl, problem: Problem, group: Solution | None, uid: str, nonce: str) -> str:
-    template = load(decl.name)
+def render_check(
+    decl: CheckDecl,
+    problem: Problem,
+    group: Solution | None,
+    uid: str,
+    nonce: str,
+    prompts_dir: Optional[Path] = None,
+) -> str:
+    template = load(decl.name, prompts_dir)
     data = wrap(nonce, build_data_block(decl, problem, group, uid))
     return (
-        template.replace("{nonce_guard}", load("_nonce_guard_zh"))
-        .replace("{json_out}", load("_json_out"))
+        template.replace("{nonce_guard}", load("_nonce_guard_zh", prompts_dir))
+        .replace("{json_out}", load("_json_out", prompts_dir))
         .replace("{data}", data)
     )
 
 
-def render_solver(problem: Problem, nonce: str) -> str:
+def render_solver(problem: Problem, nonce: str, prompts_dir: Optional[Path] = None) -> str:
     """Solver prompt.
 
     Deliberately statement-only: feeding it the reference solution, the short
@@ -122,21 +143,27 @@ def render_solver(problem: Problem, nonce: str) -> str:
     signal meaningless.
     """
     return (
-        load("solver")
-        .replace("{nonce_guard}", load("_nonce_guard_solver"))
+        load("solver", prompts_dir)
+        .replace("{nonce_guard}", load("_nonce_guard_solver", prompts_dir))
         .replace("{statement}", wrap(nonce, problem.solver_statement()))
     )
 
 
-def render_grader(problem: Problem, main: Solution, proposed: str, nonce: str) -> str:
+def render_grader(
+    problem: Problem,
+    main: Solution,
+    proposed: str,
+    nonce: str,
+    prompts_dir: Optional[Path] = None,
+) -> str:
     """Grader prompt: all five inputs are wrapped individually.
 
     The proposed solution is wrapped too -- it is model output derived from a
     statement that may itself carry an injection attempt.
     """
     return (
-        load("grader")
-        .replace("{nonce_guard}", load("_nonce_guard_grader"))
+        load("grader", prompts_dir)
+        .replace("{nonce_guard}", load("_nonce_guard_grader", prompts_dir))
         .replace("{statement}", wrap(nonce, problem.statement_en or problem.statement))
         .replace("{ground_truth}", wrap(nonce, main.text))
         .replace("{short_answer}", wrap(nonce, problem.short_answer))
