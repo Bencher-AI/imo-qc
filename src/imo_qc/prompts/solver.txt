@@ -1,5 +1,3 @@
-{nonce_guard}
-
 Solve the following proof-based mathematical olympiad problem.
 
 Write a rigorous solution in English. Provide the full argument, not just a

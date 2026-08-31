@@ -8,7 +8,6 @@ headings. Changing either without changing the prompt silently misleads the mode
 
 from __future__ import annotations
 
-import secrets
 from functools import lru_cache
 from pathlib import Path
 from typing import Optional
@@ -48,20 +47,6 @@ def load(name: str, prompts_dir: Optional[Path] = None) -> str:
         if override.exists():
             return _read(override)
     return _read(_DIR / f"{name}.txt")
-
-
-def make_nonce() -> str:
-    """A fresh boundary token per evaluation.
-
-    The literal string ``NONCE`` inside the guard texts is prose explaining the
-    scheme -- it is deliberately not substituted. Only the data tags carry the
-    real value.
-    """
-    return secrets.token_hex(4)
-
-
-def wrap(nonce: str, data: str) -> str:
-    return f"<data-{nonce}>\n{data}\n</data-{nonce}>"
 
 
 def _section(heading: str, value: str) -> str | None:
@@ -123,50 +108,35 @@ def render_check(
     problem: Problem,
     group: Solution | None,
     uid: str,
-    nonce: str,
     prompts_dir: Optional[Path] = None,
 ) -> str:
     template = load(decl.name, prompts_dir)
-    data = wrap(nonce, build_data_block(decl, problem, group, uid))
-    return (
-        template.replace("{nonce_guard}", load("_nonce_guard_zh", prompts_dir))
-        .replace("{json_out}", load("_json_out", prompts_dir))
-        .replace("{data}", data)
+    return template.replace("{json_out}", load("_json_out", prompts_dir)).replace(
+        "{data}", build_data_block(decl, problem, group, uid)
     )
 
 
-def render_solver(problem: Problem, nonce: str, prompts_dir: Optional[Path] = None) -> str:
+def render_solver(problem: Problem, prompts_dir: Optional[Path] = None) -> str:
     """Solver prompt.
 
     Deliberately statement-only: feeding it the reference solution, the short
     answer or the rubric would leak the answer and make the whole resistance
     signal meaningless.
     """
-    return (
-        load("solver", prompts_dir)
-        .replace("{nonce_guard}", load("_nonce_guard_solver", prompts_dir))
-        .replace("{statement}", wrap(nonce, problem.solver_statement()))
-    )
+    return load("solver", prompts_dir).replace("{statement}", problem.solver_statement())
 
 
 def render_grader(
     problem: Problem,
     main: Solution,
     proposed: str,
-    nonce: str,
     prompts_dir: Optional[Path] = None,
 ) -> str:
-    """Grader prompt: all five inputs are wrapped individually.
-
-    The proposed solution is wrapped too -- it is model output derived from a
-    statement that may itself carry an injection attempt.
-    """
     return (
         load("grader", prompts_dir)
-        .replace("{nonce_guard}", load("_nonce_guard_grader", prompts_dir))
-        .replace("{statement}", wrap(nonce, problem.statement_en or problem.statement))
-        .replace("{ground_truth}", wrap(nonce, main.text))
-        .replace("{short_answer}", wrap(nonce, problem.short_answer))
-        .replace("{guidelines}", wrap(nonce, serialize_rubric(main.rubric)))
-        .replace("{proposed}", wrap(nonce, proposed))
+        .replace("{statement}", problem.statement_en or problem.statement)
+        .replace("{ground_truth}", main.text)
+        .replace("{short_answer}", problem.short_answer)
+        .replace("{guidelines}", serialize_rubric(main.rubric))
+        .replace("{proposed}", proposed)
     )

@@ -52,18 +52,17 @@ async def _one_attempt(
     main: Solution,
     solver: LLMClient,
     grader: LLMClient,
-    nonce: str,
     solver_usage: TokenUsage,
     grader_usage: TokenUsage,
     prompts_dir: Optional[Path],
 ) -> Attempt:
     try:
         solution, su = await solver.complete_text(
-            prompts.render_solver(problem, nonce, prompts_dir)
+            prompts.render_solver(problem, prompts_dir)
         )
         solver_usage.add(su)
         points, raw, gu = await grader.complete_points(
-            prompts.render_grader(problem, main, solution, nonce, prompts_dir)
+            prompts.render_grader(problem, main, solution, prompts_dir)
         )
         grader_usage.add(gu)
         return Attempt(
@@ -89,13 +88,12 @@ async def run_resistance(
 
     main = problem.main_solution()
     assert main is not None  # guaranteed by precheck
-    nonce = prompts.make_nonce()
 
     tasks: dict[asyncio.Task[Attempt], int] = {}
     for i in range(1, cfg.attempts + 1):
         task = asyncio.create_task(
             _one_attempt(
-                i, problem, main, solver, grader, nonce, solver_usage, grader_usage, prompts_dir
+                i, problem, main, solver, grader, solver_usage, grader_usage, prompts_dir
             )
         )
         tasks[task] = i

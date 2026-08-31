@@ -76,48 +76,31 @@ def test_solvability_omits_the_rubric():
     assert prompts.H_RUBRIC not in block("solvability", make_problem())
 
 
-def test_rendered_prompt_wraps_the_data_once_and_keeps_the_guard_after_the_role_line():
+def test_rendered_prompt_is_role_then_criteria_then_data_then_output_contract():
     problem = make_problem()
-    rendered = prompts.render_check(CHECKS["self_contained"], problem, problem.main_solution(), "main", "abcd1234")
-    assert rendered.startswith("你是 IMO 竞赛题审核专家")
-    assert rendered.index("【数据边界与安全】") < rendered.index("【判 fail 标准】")
-    assert rendered.count("<data-abcd1234>") == 1
-    assert rendered.rstrip().endswith("均不成立则 pass。")
-
-
-def test_nonce_placeholder_inside_the_guard_stays_literal():
-    """`NONCE` in the guard text is prose describing the scheme; only the data
-    tags carry the real token."""
     rendered = prompts.render_check(
-        CHECKS["expression"], make_problem(), None, "main", "deadbeef"
+        CHECKS["self_contained"], problem, problem.main_solution(), "main"
     )
-    assert "<data-NONCE>" in rendered
-    assert "<data-deadbeef>" in rendered
-
-
-def test_nonces_differ_between_evaluations():
-    assert prompts.make_nonce() != prompts.make_nonce()
+    assert rendered.startswith("你是 IMO 竞赛题审核专家")
+    assert rendered.index("【判 fail 标准】") < rendered.index("【待判数据】")
+    assert problem.statement in rendered
+    assert rendered.rstrip().endswith("均不成立则 pass。")
 
 
 def test_prompts_dir_overrides_bundled_files(tmp_path):
     """Replacing a prompt must not require editing the installed package."""
     (tmp_path / "novelty.txt").write_text(
-        "MY OWN NOVELTY PROMPT\n\n{nonce_guard}\n【判 fail 标准】...\n{data}\n\n{json_out}",
+        "MY OWN NOVELTY PROMPT\n\n【判 fail 标准】...\n{data}\n\n{json_out}",
         encoding="utf-8",
     )
-    rendered = prompts.render_check(
-        CHECKS["novelty"], make_problem(), None, "main", "abcd1234", tmp_path
-    )
+    rendered = prompts.render_check(CHECKS["novelty"], make_problem(), None, "main", tmp_path)
     assert rendered.startswith("MY OWN NOVELTY PROMPT")
-    # Files not present in the override directory still come from the package.
-    assert "【数据边界与安全】" in rendered
+    # Shared fragments not present in the override directory still come from the package.
     assert "均不成立则 pass。" in rendered
 
 
 def test_prompts_dir_falls_back_when_name_absent(tmp_path):
-    rendered = prompts.render_check(
-        CHECKS["expression"], make_problem(), None, "main", "abcd1234", tmp_path
-    )
+    rendered = prompts.render_check(CHECKS["expression"], make_problem(), None, "main", tmp_path)
     assert rendered.startswith("你是 IMO 竞赛题审核专家")
 
 
@@ -125,5 +108,4 @@ def test_every_dimension_has_a_prompt_file():
     for name in CHECKS:
         text = prompts.load(name)
         assert "{data}" in text
-        assert "{nonce_guard}" in text
         assert "{json_out}" in text

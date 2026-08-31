@@ -46,12 +46,11 @@ async def _judge(
     problem: Problem,
     group: Optional[Solution],
     uid: str,
-    nonce: str,
     client: LLMClient,
     usage: TokenUsage,
     prompts_dir: Optional[Path],
 ) -> GroupResult:
-    prompt = prompts.render_check(decl, problem, group, uid, nonce, prompts_dir)
+    prompt = prompts.render_check(decl, problem, group, uid, prompts_dir)
     try:
         (verdict, reason), _, u = await client.complete_verdict(prompt)
         usage.add(u)
@@ -66,10 +65,8 @@ async def run_quality_checks(
     client: LLMClient,
     *,
     usage: dict[str, TokenUsage],
-    nonce: Optional[str] = None,
     prompts_dir: Optional[Path] = None,
 ) -> dict[str, CheckResult]:
-    nonce = nonce or prompts.make_nonce()
     results: dict[str, CheckResult] = {}
     jobs: list[tuple[str, asyncio.Task[GroupResult]]] = []
 
@@ -87,7 +84,7 @@ async def run_quality_checks(
                 (
                     name,
                     asyncio.create_task(
-                        _judge(decl, problem, group, uid, nonce, client, bucket, prompts_dir)
+                        _judge(decl, problem, group, uid, client, bucket, prompts_dir)
                     ),
                 )
             )

@@ -1,5 +1,4 @@
 import asyncio
-import re
 
 from conftest import FakeClient, full_rubric, make_problem
 
@@ -172,13 +171,7 @@ async def test_solver_prompt_prefers_english_statement():
     assert "中文题面" not in prompt
 
 
-async def test_solver_prompt_carries_its_security_notice():
-    solver = FakeClient()
-    await run(make_problem(), solver, FakeClient(), attempts=1)
-    assert "SECURITY NOTICE" in solver.text_prompts[0]
-
-
-async def test_grader_prompt_wraps_all_five_inputs():
+async def test_grader_prompt_carries_all_five_inputs():
     problem = make_problem(
         short_answer="42",
         solutions=[Solution(text="参考解答", rubric=full_rubric())],
@@ -186,10 +179,8 @@ async def test_grader_prompt_wraps_all_five_inputs():
     grader = FakeClient(points=6)
     await run(problem, FakeClient(text="学生解答"), grader, attempts=1)
     prompt = grader.points_prompts[0]
-    assert "SECURITY NOTICE" in prompt
-    for value in ("参考解答", "42", "步骤一", "学生解答"):
+    # Statement, ground truth, short answer, guidelines, proposed solution.
+    for value in (problem.statement, "参考解答", "42", "步骤一", "学生解答"):
         assert value in prompt
-    # Five wrapped payloads: statement, ground truth, short answer, guidelines,
-    # proposed solution. The `<data-NONCE>` inside the security notice is prose
-    # and is excluded here.
-    assert len(re.findall(r"<data-(?!NONCE)[0-9a-f]+>", prompt)) == 5
+    for placeholder in ("{statement}", "{ground_truth}", "{short_answer}", "{guidelines}", "{proposed}"):
+        assert placeholder not in prompt

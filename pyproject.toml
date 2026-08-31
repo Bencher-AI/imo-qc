@@ -5,7 +5,7 @@ description = "AI-resistance and quality checks for olympiad math problems"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
-authors = [{ name = "UniPat-AI" }]
+authors = [{ name = "Bencher-AI" }]
 keywords = ["olympiad", "mathematics", "evaluation", "llm", "imo"]
 classifiers = [
   "License :: OSI Approved :: Apache Software License",
@@ -27,7 +27,7 @@ dev = ["pytest>=8.0", "pytest-asyncio>=0.23"]
 imo-qc = "imo_qc.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/UniPat-AI/imo-qc"
+Homepage = "https://github.com/Bencher-AI/imo-qc"
 
 [build-system]
 requires = ["hatchling"]
